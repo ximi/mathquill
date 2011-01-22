@@ -105,7 +105,7 @@ function createRoot(jQ, root, textbox, editable) {
     //if no MathQuill data, try parent, if still no,
     //the user probably didn't click on the math after all
     else {
-      clicked = clicked.parent();
+      clicked = clicked. parent();
       data = clicked.data(jQueryDataKey);
       if (!data)
         return;

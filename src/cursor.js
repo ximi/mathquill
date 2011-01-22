@@ -28,9 +28,9 @@ _.show = function() {
   else { //was hidden and detached, insert this.jQ back into HTML DOM
     if (this.next) {
       if (this.selection && this.selection.prev === this.prev)
-        this.jQ.insertBefore(this.selection.jQ);
+        this.jQ. insertBefore(this.selection.jQ);
       else
-        this.jQ.insertBefore(this.next.jQ);
+        this.jQ. insertBefore(this.next.jQ);
     }
     else
       this.jQ.appendTo(this.parent.jQ);
@@ -64,19 +64,19 @@ _.insertAt = function(parent, next, prev) {
 _.insertBefore = function(el) {
   this.insertAt(el.parent, el, el.prev)
   this.parent.jQ.addClass('hasCursor');
-  this.jQ.insertBefore(el.jQ.first());
+  this.jQ. insertBefore(el.jQ.first());
   return this;
 };
 _.insertAfter = function(el) {
   this.insertAt(el.parent, el.next, el);
   this.parent.jQ.addClass('hasCursor');
-  this.jQ.insertAfter(el.jQ.last());
+  this.jQ. insertAfter(el.jQ.last());
   return this;
 };
 _.prependTo = function(el) {
   this.insertAt(el, el.firstChild, 0);
   if (el.textarea) //never insert before textarea
-    this.jQ.insertAfter(el.textarea);
+    this.jQ. insertAfter(el.textarea);
   else
     this.jQ.prependTo(el.jQ);
   el.focus();
@@ -89,13 +89,13 @@ _.appendTo = function(el) {
   return this;
 };
 _.hopLeft = function() {
-  this.jQ.insertBefore(this.prev.jQ.first());
+  this.jQ. insertBefore(this.prev.jQ.first());
   this.next = this.prev;
   this.prev = this.prev.prev;
   return this;
 };
 _.hopRight = function() {
-  this.jQ.insertAfter(this.next.jQ.last());
+  this.jQ. insertAfter(this.next.jQ.last());
   this.prev = this.next;
   this.next = this.next.next;
   return this;
@@ -178,7 +178,7 @@ _.insertNew = function(cmd) {
   else
     this.parent.lastChild = cmd;
 
-  cmd.jQ.insertBefore(this.jQ);
+  cmd.jQ. insertBefore(this.jQ);
   this.prev = cmd;
 
   //adjust context-sensitive spacing
@@ -205,7 +205,7 @@ _.unwrapGramp = function() {
 
     uncle.eachChild(function(cousin) {
       cousin.parent = greatgramp;
-      cousin.jQ.insertBefore(gramp.jQ);
+      cousin.jQ. insertBefore(gramp.jQ);
     });
     uncle.firstChild.prev = prev;
     if (prev)
@@ -306,7 +306,7 @@ _.selectLeft = function() {
         this.insertBefore(this.parent.parent).selection.levelUp();
     }
     else { //else cursor is at right edge of selection, retract left
-      this.prev.jQ.insertAfter(this.selection.jQ);
+      this.prev.jQ. insertAfter(this.selection.jQ);
       this.hopLeft().selection.next = this.next;
       if (this.selection.prev === this.prev)
         this.deleteSelection();
@@ -333,7 +333,7 @@ _.selectRight = function() {
         this.insertAfter(this.parent.parent).selection.levelUp();
     }
     else { //else cursor is at left edge of selection, retract right
-      this.next.jQ.insertBefore(this.selection.jQ);
+      this.next.jQ. insertBefore(this.selection.jQ);
       this.hopRight().selection.prev = this.prev;
       if (this.selection.next === this.next)
         this.deleteSelection();
@@ -371,7 +371,7 @@ function Selection(parent, prev, next) {
 }
 _ = Selection.prototype = new MathFragment;
 _.jQinit= function(children) {
-  this.jQ = children.wrapAll('<span class="selection"></span>').parent();
+  this.jQ = children.wrapAll('<span class="selection"></span>'). parent();
     //can't do wrapAll(this.jQ = $(...)) because wrapAll will clone it
 };
 _.levelUp = function() {
