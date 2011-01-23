@@ -9,275 +9,317 @@ function proto(parent, child) { //shorthand for prototyping
   return child;
 }
 
-function SupSub(cmd, html, replacedFragment) {
-  MathCommand.call(this, cmd, [ html ], replacedFragment);
+var __unshift = Array.prototype.unshift;
+function consOverride(Cls, fn) {
+  var init = Cls.prototype.init,
+  function cons() {
+    var self = this, args = arguments;
+    __unshift.apply(args, function() {
+      init.apply(self, arguments));
+    });
+    fn.apply(this, args);
+  }
+  cons.prototype = Cls.prototype;
+  return cons;
 }
-_ = SupSub.prototype = new MathCommand;
-_.latex = function() {
-  var latex = this.firstChild.latex();
-  if (latex.length === 1)
-    return this.cmd + latex;
-  else
-    return this.cmd + '{' + (latex || ' ') + '}';
-};
-_.redraw = function() {
-  this.respace();
-  if (this.next)
-    this.next.respace();
-  if (this.prev)
-    this.prev.respace();
-};
-_.respace = function() {
-  if (
-    this.prev && (
-      this.prev.cmd === '\\int ' || (
-        this.prev instanceof SupSub && this.prev.cmd != this.cmd &&
-        this.prev.prev && this.prev.prev.cmd === '\\int '
+
+var SupSub = Class(MathCommand, function(proto, super) {
+  proto.init = function(cmd, html, replacedFragment) {
+    super.init.call(this, cmd, [ html ], replacedFragment);
+  };
+  proto.latex = function() {
+    var latex = this.firstChild.latex();
+    if (latex.length === 1)
+      return this.cmd + latex;
+    else
+      return this.cmd + '{' + (latex || ' ') + '}';
+  };
+  proto.redraw = function() {
+    this.respace();
+    if (this.next)
+      this.next.respace();
+    if (this.prev)
+      this.prev.respace();
+  };
+  proto.respace = function() {
+    if (
+      this.prev && (
+        this.prev.cmd === '\\int ' || (
+          this.prev instanceof SupSub && this.prev.cmd != this.cmd &&
+          this.prev.prev && this.prev.prev.cmd === '\\int '
+        )
       )
-    )
-  ) {
-    if (!this.limit) {
-      this.limit = true;
-      this.jQ.addClass('limit');
+    ) {
+      if (!this.limit) {
+        this.limit = true;
+        this.jQ.addClass('limit');
+      }
     }
-  }
-  else {
-    if (this.limit) {
-      this.limit = false;
-      this.jQ.removeClass('limit');
+    else {
+      if (this.limit) {
+        this.limit = false;
+        this.jQ.removeClass('limit');
+      }
     }
-  }
-  if (this.respaced = this.prev instanceof SupSub && this.prev.cmd != this.cmd && !this.prev.respaced) {
-    if (this.limit && this.cmd === '_') {
+    if (this.respaced = this.prev instanceof SupSub && this.prev.cmd != this.cmd && !this.prev.respaced) {
+      if (this.limit && this.cmd === '_') {
+        this.jQ.css({
+          left: -.25-this.prev.jQ.outerWidth()/+this.jQ.css('fontSize').slice(0,-2)+'em',
+          marginRight: .1-Math.min(this.jQ.outerWidth(), this.prev.jQ.outerWidth())/+this.jQ.css('fontSize').slice(0,-2)+'em' //1px adjustment very important!
+        });
+      }
+      else {
+        this.jQ.css({
+          left: -this.prev.jQ.outerWidth()/+this.jQ.css('fontSize').slice(0,-2)+'em',
+          marginRight: .1-Math.min(this.jQ.outerWidth(), this.prev.jQ.outerWidth())/+this.jQ.css('fontSize').slice(0,-2)+'em' //1px adjustment very important!
+        });
+      }
+    }
+    else if (this.limit && this.cmd === '_') {
       this.jQ.css({
-        left: -.25-this.prev.jQ.outerWidth()/+this.jQ.css('fontSize').slice(0,-2)+'em',
-        marginRight: .1-Math.min(this.jQ.outerWidth(), this.prev.jQ.outerWidth())/+this.jQ.css('fontSize').slice(0,-2)+'em' //1px adjustment very important!
+        left: '-.25em',
+        marginRight: ''
       });
+    }
+    else if (this.cmd === '^' && this.next && this.next.cmd === '\\sqrt') {
+      this.jQ.css({
+        left: '',
+        marginRight: Math.max(-.3, .1-this.jQ.outerWidth()/+this.jQ.css('fontSize').slice(0,-2))+'em'
+      }).addClass('limit');
     }
     else {
       this.jQ.css({
-        left: -this.prev.jQ.outerWidth()/+this.jQ.css('fontSize').slice(0,-2)+'em',
-        marginRight: .1-Math.min(this.jQ.outerWidth(), this.prev.jQ.outerWidth())/+this.jQ.css('fontSize').slice(0,-2)+'em' //1px adjustment very important!
+        left: '',
+        marginRight: ''
       });
     }
-  }
-  else if (this.limit && this.cmd === '_') {
-    this.jQ.css({
-      left: '-.25em',
-      marginRight: ''
-    });
-  }
-  else if (this.cmd === '^' && this.next && this.next.cmd === '\\sqrt') {
-    this.jQ.css({
-      left: '',
-      marginRight: Math.max(-.3, .1-this.jQ.outerWidth()/+this.jQ.css('fontSize').slice(0,-2))+'em'
-    }).addClass('limit');
-  }
-  else {
-    this.jQ.css({
-      left: '',
-      marginRight: ''
-    });
-  }
 
-  return this;
-};
+    return this;
+  };
+});
 
-LatexCmds.subscript = LatexCmds._ = proto(SupSub, function(replacedFragment) {
-  SupSub.call(this, '_', '<sub></sub>', replacedFragment);
+//TODO: make this better.
+LatexCmds.subscript = LatexCmds._ = Class(SupSub, function(replacedFragment) {
+  SupSub.prototype.init.call(this, '_', '<sub></sub>', replacedFragment);
 });
 
 LatexCmds.superscript =
 LatexCmds.supscript =
 LatexCmds['^'] = proto(SupSub, function(replacedFragment) {
-  SupSub.call(this, '^', '<sup></sup>', replacedFragment);
+  SupSub.prototype.init.call(this, '^', '<sup></sup>', replacedFragment);
 });
 
-function Fraction(replacedFragment) {
-  MathCommand.call(this, '\\frac', undefined, replacedFragment);
-  this.jQ.append('<span style="width:0">&nbsp;</span>');
-}
-_ = Fraction.prototype = new MathCommand;
-_.html_template = [
-  '<span class="fraction"></span>',
-  '<span class="numerator"></span>',
-  '<span class="denominator"></span>'
-];
+var Fraction = 
+LatexCmds.frac =
+LatexCmds.fraction = Class(MathCommand, function(proto, super) {
+  proto.init = function(replacedFragment) {
+    super.init.call(this, '\\frac', undefined, replacedFragment);
+    this.jQ.append('<span style="width:0">&nbsp;</span>');
+  };
+  proto.html_template = [
+    '<span class="fraction"></span>',
+    '<span class="numerator"></span>',
+    '<span class="denominator"></span>'
+  ];
+};
 
-LatexCmds.frac = LatexCmds.fraction = Fraction;
+var LiveFraction = 
+CharCmds['/'] = Class(Fraction, function(proto) {
+  proto.placeCursor = function(cursor) {
+    if (this.firstChild.isEmpty()) {
+      var prev = this.prev;
+      while (prev &&
+        !(
+          prev instanceof BinaryOperator ||
+          prev instanceof TextBlock ||
+          prev instanceof BigSymbol
+        ) //lookbehind for operator
+      )
+        prev = prev.prev;
 
-function LiveFraction() {
-  Fraction.apply(this, arguments);
-}
-_ = LiveFraction.prototype = new Fraction;
-_.placeCursor = function(cursor) {
-  if (this.firstChild.isEmpty()) {
-    var prev = this.prev;
-    while (prev &&
-      !(
-        prev instanceof BinaryOperator ||
-        prev instanceof TextBlock ||
-        prev instanceof BigSymbol
-      ) //lookbehind for operator
-    )
-      prev = prev.prev;
-
-    if (prev instanceof BigSymbol && prev.next instanceof SupSub) {
-      prev = prev.next;
-      if (prev.next instanceof SupSub && prev.next.cmd != prev.cmd)
+      if (prev instanceof BigSymbol && prev.next instanceof SupSub) {
         prev = prev.next;
+        if (prev.next instanceof SupSub && prev.next.cmd != prev.cmd)
+          prev = prev.next;
+      }
+
+      if (prev !== this.prev) {
+        var newBlock = create(MathFragment, this.parent, prev, this).blockify();
+        newBlock.jQ = this.firstChild.jQ.empty().removeClass('empty').append(newBlock.jQ).data(jQueryDataKey, { block: newBlock });
+        newBlock.next = this.lastChild;
+        newBlock.parent = this;
+        this.firstChild = this.lastChild.prev = newBlock;
+      }
     }
+    cursor.appendTo(this.lastChild);
+  };
+});
 
-    if (prev !== this.prev) {
-      var newBlock = new MathFragment(this.parent, prev, this).blockify();
-      newBlock.jQ = this.firstChild.jQ.empty().removeClass('empty').append(newBlock.jQ).data(jQueryDataKey, { block: newBlock });
-      newBlock.next = this.lastChild;
-      newBlock.parent = this;
-      this.firstChild = this.lastChild.prev = newBlock;
-    }
-  }
-  cursor.appendTo(this.lastChild);
-};
-
-CharCmds['/'] = LiveFraction;
-
-function SquareRoot(replacedFragment) {
-  MathCommand.call(this, '\\sqrt', undefined, replacedFragment);
-}
-_ = SquareRoot.prototype = new MathCommand;
-_.html_template = [
-  '<span><span class="sqrt-prefix">&radic;</span></span>',
-  '<span class="sqrt-stem"></span>'
-];
-_.redraw = function() {
-  var block = this.firstChild.jQ, height = block.outerHeight(true);
-  block.css({
-    borderTopWidth: height/28+1 // NOTE: Formula will need to change if our font isn't Symbola
-  }).prev().css({
-    fontSize: .9*height/+block.css('fontSize').slice(0,-2)+'em'
-  });
-};
-
-LatexCmds.sqrt = SquareRoot;
+var SquareRoot = 
+LatexCmds.sqrt = Class(MathCommand, function(proto, super) {
+  proto.init = function(replacedFragment) {
+    super.init.call(this, '\\sqrt', undefined, replacedFragment);
+  };
+  proto.html_template = [
+    '<span><span class="sqrt-prefix">&radic;</span></span>',
+    '<span class="sqrt-stem"></span>'
+  ];
+  proto.redraw = function() {
+    var block = this.firstChild.jQ, height = block.outerHeight(true);
+    block.css({
+      borderTopWidth: height/28+1 // NOTE: Formula will need to change if our font isn't Symbola
+    }).prev().css({
+      fontSize: .9*height/+block.css('fontSize').slice(0,-2)+'em'
+    });
+  };
+});
 
 // Round/Square/Curly/Angle Brackets (aka Parens/Brackets/Braces)
-function Bracket(open, close, cmd, end, replacedFragment) {
-  MathCommand.call(this, '\\left'+cmd,
-    ['<span><span class="paren">'+open+'</span><span></span><span class="paren">'+close+'</span></span>'],
-    replacedFragment);
-  this.end = '\\right'+end;
-}
-_ = Bracket.prototype = new MathCommand;
-_.initBlocks = function(replacedFragment) {
-  this.firstChild = this.lastChild =
-    (replacedFragment && replacedFragment.blockify()) || new MathBlock;
-  this.firstChild.parent = this;
-  this.firstChild.jQ = this.jQ.children(':eq(1)')
-    .data(jQueryDataKey, {block: this.firstChild})
-    .append(this.firstChild.jQ);
-};
-_.latex = function() {
-  return this.cmd + this.firstChild.latex() + this.end;
-};
-_.redraw = function() {
-  var block = this.firstChild.jQ;
-  block.prev().add(block.next()).css('fontSize', block.outerHeight()/(+block.css('fontSize').slice(0,-2)*1.02)+'em');
-};
+var Bracket = Class(MathCommand, function(super, proto) {
+  proto.init = function(open, close, cmd, end, replacedFragment) {
+    super.init.call(this, '\\left'+cmd,
+      [
+        '<span><span class="paren">' +
+        open +
+        '</span><span></span><span class="paren">' +
+        close +
+        '</span></span>'
+      ],
+      replacedFragment
+    );
+    this.end = '\\right'+end;
+  }
+  proto.initBlocks = function(replacedFragment) {
+    this.firstChild =
+    this.lastChild = (
+      replacedFragment && replacedFragment.blockify()
+    ) || create(MathBlock);
 
-LatexCmds.lbrace = CharCmds['{'] = proto(Bracket, function(replacedFragment) {
-  Bracket.call(this, '{', '}', '\\{', '\\}', replacedFragment);
+    this.firstChild.parent = this;
+    this.firstChild.jQ = this.jQ.children(':eq(1)')
+      .data(jQueryDataKey, {block: this.firstChild})
+      .append(this.firstChild.jQ);
+  };
+
+  proto.latex = function() {
+    return this.cmd + this.firstChild.latex() + this.end;
+  };
+
+  proto.redraw = function() {
+    var block = this.firstChild.jQ;
+    block.prev()
+      .add(block.next())
+      .css('fontSize',
+        block.outerHeight() / (
+          +block.css('fontSize').slice(0,-2)*1.02
+        )+'em'
+      )
+    ;
+  };
 });
-LatexCmds.langle = LatexCmds.lang = proto(Bracket, function(replacedFragment) {
-  Bracket.call(this,'&lang;','&rang;','\\langle ','\\rangle ',replacedFragment);
+
+LatexCmds.lbrace = CharCmds['{'] = consOverride(Bracket, function(cons, replacedFragment) {
+  cons('{', '}', '\\{', '\\}', replacedFragment);
+});
+
+LatexCmds.langle =
+LatexCmds.lang = consOverride(Bracket, function(cons, replacedFragment) {
+  cons('&lang;', '&rang;', '\\langle ', '\\rangle ', replacedFragment);
 });
 
 // Closing bracket matching opening bracket above
-function CloseBracket(open, close, cmd, end, replacedFragment) {
-  Bracket.apply(this, arguments);
-}
-_ = CloseBracket.prototype = new Bracket;
-_.placeCursor = function(cursor) {
-  //if I'm at the end of my parent who is a matching open-paren, and I was not passed
-  //  a selection fragment, get rid of me and put cursor after my parent
-  if (!this.next && this.parent.parent && this.parent.parent.end === this.end && this.firstChild.isEmpty())
-    cursor.backspace().insertAfter(this.parent.parent);
-  else
-    this.firstChild.blur();
-};
-
-LatexCmds.rbrace = CharCmds['}'] = proto(CloseBracket, function(replacedFragment) {
-  CloseBracket.call(this, '{','}','\\{','\\}',replacedFragment);
-});
-LatexCmds.rangle = LatexCmds.rang = proto(CloseBracket, function(replacedFragment) {
-  CloseBracket.call(this,'&lang;','&rang;','\\langle ','\\rangle ',replacedFragment);
+var CloseBracket = Class(Bracket, function(proto) {
+  proto.placeCursor = function(cursor) {
+    //if I'm at the end of my parent who is a matching open-paren, and I was not passed
+    //  a selection fragment, get rid of me and put cursor after my parent
+    if (!this.next && this.parent.parent && this.parent.parent.end === this.end && this.firstChild.isEmpty())
+      cursor.backspace().insertAfter(this.parent.parent);
+    else
+      this.firstChild.blur();
+  };
 });
 
-function Paren(open, close, replacedFragment) {
-  Bracket.call(this, open, close, open, close, replacedFragment);
-}
-Paren.prototype = Bracket.prototype;
-
-LatexCmds.lparen = CharCmds['('] = proto(Paren, function(replacedFragment) {
-  Paren.call(this, '(', ')', replacedFragment);
-});
-LatexCmds.lbrack = LatexCmds.lbracket = CharCmds['['] = proto(Paren, function(replacedFragment) {
-  Paren.call(this, '[', ']', replacedFragment);
+LatexCmds.rbrace =
+CharCmds['}'] = consOverride(CloseBracket, function(cons, replacedFragment) {
+  cons('{','}','\\{','\\}',replacedFragment);
 });
 
-function CloseParen(open, close, replacedFragment) {
-  CloseBracket.call(this, open, close, open, close, replacedFragment);
-}
-CloseParen.prototype = CloseBracket.prototype;
-
-LatexCmds.rparen = CharCmds[')'] = proto(CloseParen, function(replacedFragment) {
-  CloseParen.call(this, '(', ')', replacedFragment);
-});
-LatexCmds.rbrack = LatexCmds.rbracket = CharCmds[']'] = proto(CloseParen, function(replacedFragment) {
-  CloseParen.call(this, '[', ']', replacedFragment);
+LatexCmds.rangle = LatexCmds.rang = consOverride(CloseBracket, function(cons, replacedFragment) {
+  cons('&lang;', '&rang;', '\\langle ', '\\rangle ', replacedFragment);
 });
 
-function Pipes(replacedFragment) {
-  Paren.call(this, '|', '|', replacedFragment);
-}
-_ = Pipes.prototype = new Paren;
-_.placeCursor = function(cursor) {
-  if (!this.next && this.parent.parent && this.parent.parent.end === this.end && this.firstChild.isEmpty())
-    cursor.backspace().insertAfter(this.parent.parent);
-  else
-    cursor.appendTo(this.firstChild);
-};
+var Paren = consOverride(Bracket, function(cons, open, close, replacedFragment) {
+  cons(open, close, open, close, replacedFragment);
+});
 
-LatexCmds.lpipe = LatexCmds.rpipe = CharCmds['|'] = Pipes;
+LatexCmds.lparen = CharCmds['('] = consOverride(Paren, function(cons, replacedFragment) {
+  cons('(', ')', replacedFragment);
+});
+LatexCmds.lbrack =
+LatexCmds.lbracket =
+CharCmds['['] = consOverride(Paren, function(cons, replacedFragment) {
+  cons('[', ']', replacedFragment);
+});
 
-function TextBlock(replacedText) {
-  if (replacedText instanceof MathFragment)
-    this.replacedText = replacedText.remove().jQ.text();
-  else if (typeof replacedText === 'string')
-    this.replacedText = replacedText;
+var CloseParen = consOverride(CloseBracket, function(cons, open, close, replacedFragment) {
+  cons(this, open, close, open, close, replacedFragment);
+});
 
-  MathCommand.call(this, '\\text');
-}
-_ = TextBlock.prototype = new MathCommand;
-_.html_template = ['<span class="text"></span>'];
-_.initBlocks = function() {
+LatexCmds.rparen = CharCmds[')'] = consOverride(CloseParen, function(cons, replacedFragment) {
+  cons('(', ')', replacedFragment);
+});
+
+LatexCmds.rbrack =
+LatexCmds.rbracket =
+CharCmds[']'] = consOverride(CloseParen, function(cons, replacedFragment) {
+  cons('[', ']', replacedFragment);
+});
+
+var Pipes = 
+LatexCmds.lpipe =
+CharCmds['|'] = Class(Paren, function(proto, super) {
+  proto.init = function(replacedFragment) {
+    super.init.call(this, '|', '|', replacedFragment);
+  }
+  proto.placeCursor = function(cursor) {
+    if (!this.next && this.parent.parent && this.parent.parent.end === this.end && this.firstChild.isEmpty())
+      cursor.backspace().insertAfter(this.parent.parent);
+    else
+      cursor.appendTo(this.firstChild);
+  };
+});
+
+var TextBlock =
+LatexCmds.text =
+CharCmds.$ = Class(MathCommand, function(proto, super) {
+  proto.init = function(replacedText) {
+    if (replacedText instanceof MathFragment)
+      this.replacedText = replacedText.remove().jQ.text();
+    else if (typeof replacedText === 'string')
+      this.replacedText = replacedText;
+
+    super.init.call(this, '\\text');
+  };
+  proto.html_template = ['<span class="text"></span>'];
+  proto.initBlocks = function() {
     this.firstChild =
     this.lastChild =
-    this.jQ.data(jQueryDataKey).block = new InnerTextBlock;
+    this.jQ.data(jQueryDataKey).block = create(InnerTextBlock);
 
     this.firstChild.parent = this;
     this.firstChild.jQ = this.jQ.append(this.firstChild.jQ);
   };
-_.placeCursor = function(cursor) {
+  proto.placeCursor = function(cursor) {
     (this.cursor = cursor).appendTo(this.firstChild);
 
     if (this.replacedText)
       for (var i = 0; i < this.replacedText.length; i += 1)
         this.write(this.replacedText.charAt(i));
   };
-_.write = function(ch) {
-    this.cursor.insertNew(new VanillaSymbol(ch));
+  proto.write = function(ch) {
+    this.cursor.insertNew(create(VanillaSymbol, ch));
   };
-_.keydown = function(e) {
+  proto.keydown = function(e) {
     //backspace and delete and ends of block don't unwrap
     if (!this.cursor.selection &&
       (
@@ -291,21 +333,24 @@ _.keydown = function(e) {
     }
     return this.parent.keydown(e);
   };
-_.keypress = function(e) {
+  proto.keypress = function(e) {
     this.cursor.deleteSelection();
     var ch = String.fromCharCode(e.which);
     if (ch !== '$')
       this.write(ch);
     else if (this.isEmpty())
-      this.cursor.insertAfter(this).backspace().insertNew(new VanillaSymbol('\\$','$'));
+      this.cursor.insertAfter(this).backspace().insertNew(
+        create(VanillaSymbol, '\\$','$')
+      );
     else if (!this.cursor.next)
       this.cursor.insertAfter(this);
     else if (!this.cursor.prev)
       this.cursor.insertBefore(this);
     else { //split apart
-      var next = new TextBlock(new MathFragment(this.firstChild, this.cursor.prev));
-      next.placeCursor = function(cursor) // ********** REMOVEME HACK **********
-      {
+      var next = create(TextBlock,
+        create(MathFragment, this.firstChild, this.cursor.prev)
+      );
+      next.placeCursor = function(cursor) { // ********** REMOVEME HACK **********
         this.prev = 0;
         delete this.placeCursor;
         this.placeCursor(cursor);
@@ -318,9 +363,10 @@ _.keypress = function(e) {
     }
     return false;
   };
-function InnerTextBlock(){}
-_ = InnerTextBlock.prototype = new MathBlock;
-_.blur = function() {
+});
+
+var InnerTextBlock = Class(MathBlock, function(proto, super){}
+  proto.blur = function() {
     this.jQ.removeClass('hasCursor');
     if (this.isEmpty()) {
       var textblock = this.parent, cursor = textblock.cursor;
@@ -339,7 +385,8 @@ _.blur = function() {
     }
     return this;
   };
-_.focus = function() {
+
+  proto.focus = function() {
     MathBlock.prototype.focus.call(this);
 
     var textblock = this.parent;
@@ -379,39 +426,38 @@ _.focus = function() {
     }
     return this;
   };
-
-LatexCmds.text = CharCmds.$ = TextBlock;
+});
 
 // input box to type a variety of LaTeX commands beginning with a backslash
-function LatexCommandInput(replacedFragment) {
-  MathCommand.call(this, '\\');
-  if (replacedFragment) {
-    this.replacedFragment = replacedFragment.detach();
-    this.isEmpty = function(){ return false; };
-  }
-}
-_ = LatexCommandInput.prototype = new MathCommand;
-_.html_template = ['<span class="latex-command-input"></span>'];
-_.placeCursor = function(cursor) {
+var LatexCommandInput = CharCmds['\\'] = Class(MathCommand, function(proto, super) {
+  proto.init = function(replacedFragment) {
+    MathCommand.call(this, '\\');
+    if (replacedFragment) {
+      this.replacedFragment = replacedFragment.detach();
+      this.isEmpty = function(){ return false; };
+    }
+  };
+  proto.html_template = ['<span class="latex-command-input"></span>'];
+  proto.placeCursor = function(cursor) {
     this.cursor = cursor.appendTo(this.firstChild);
     if (this.replacedFragment)
       this.jQ = this.jQ.add(this.replacedFragment.jQ.addClass('blur').insertBefore(this.jQ));
   };
-_.latex = function() {
+  proto.latex = function() {
     return '\\' + this.firstChild.latex() + ' ';
   };
-_.keydown = function(e) {
+  proto.keydown = function(e) {
     if (e.which === 9 || e.which === 13) { //tab or enter
       this.renderCommand();
       return false;
     }
     return this.parent.keydown(e);
   };
-_.keypress = function(e) {
+  proto.keypress = function(e) {
     var ch = String.fromCharCode(e.which);
     if (ch.match(/[a-z]/i)) {
       this.cursor.deleteSelection();
-      this.cursor.insertNew(new VanillaSymbol(ch));
+      this.cursor.insertNew(create(VanillaSymbol, ch));
       return false;
     }
     this.renderCommand();
@@ -420,7 +466,7 @@ _.keypress = function(e) {
 
     return this.cursor.parent.keypress(e);
   };
-_.renderCommand = function() {
+  proto.renderCommand = function() {
     this.jQ = this.jQ.last();
     this.remove();
     if (this.next)
@@ -431,9 +477,9 @@ _.renderCommand = function() {
     var latex = this.firstChild.latex(), cmd;
     if (latex) {
       if (cmd = LatexCmds[latex])
-        cmd = new cmd(this.replacedFragment, latex);
+        cmd = create(cmd, this.replacedFragment, latex);
       else {
-        cmd = new TextBlock(latex);
+        cmd = create(TextBlock, latex);
         cmd.firstChild.focus = function(){ delete this.focus; return true; };
         this.cursor.insertNew(cmd).insertAfter(cmd);
         if (this.replacedFragment)
@@ -443,132 +489,131 @@ _.renderCommand = function() {
       }
     }
     else
-      cmd = new VanillaSymbol('\\backslash ','\\');
+      cmd = create(VanillaSymbol, '\\backslash ','\\');
 
     this.cursor.insertNew(cmd);
     if (cmd instanceof Symbol && this.replacedFragment)
       this.replacedFragment.remove();
   };
+});
 
-CharCmds['\\'] = LatexCommandInput;
-  
-function Binomial(replacedFragment) {
-  MathCommand.call(this, '\\binom', undefined, replacedFragment);
-  this.jQ.wrapInner('<span class="array"></span>').prepend('<span class="paren">(</span>').append('<span class="paren">)</span>');
-}
-_ = Binomial.prototype = new MathCommand;
-_.html_template =
-  ['<span></span>', '<span></span>', '<span></span>'];
-_.redraw = function() {
-  this.jQ.children(':first').add(this.jQ.children(':last'))
-    .css('fontSize',
-      this.jQ.outerHeight()/(+this.jQ.css('fontSize').slice(0,-2)*.9+2)+'em'
-    );
-};
 
-LatexCmds.binom = LatexCmds.binomial = Binomial;
+var Binomial =
+LatexCmds.binom =
+LatexCmds.binomial = Class(MathCommand, function(proto, super) {
+  proto.init = function(replacedFragment) {
+    MathCommand.call(this, '\\binom', undefined, replacedFragment);
+    this.jQ.wrapInner('<span class="array"></span>').prepend('<span class="paren">(</span>').append('<span class="paren">)</span>');
+  };
 
-function Choose() {
-  Binomial.apply(this, arguments);
-}
-_ = Choose.prototype = new Binomial;
-_.placeCursor = LiveFraction.prototype.placeCursor;
+  proto.html_template = ['<span></span>', '<span></span>', '<span></span>'];
 
-LatexCmds.choose = Choose;
+  proto.redraw = function() {
+    this.jQ.children(':first').add(this.jQ.children(':last'))
+      .css('fontSize',
+        this.jQ.outerHeight()/(+this.jQ.css('fontSize').slice(0,-2)*.9+2)+'em'
+      );
+  };
+});
 
-function Vector(replacedFragment) {
-  MathCommand.call(this, '\\vector', undefined, replacedFragment);
-}
-_ = Vector.prototype = new MathCommand;
-_.html_template = ['<span class="array"></span>', '<span></span>'];
-_.latex = function() {
-  return '\\begin{matrix}' + this.foldChildren([], function (latex){
-    latex.push(this.latex());
-    return latex;
-  }).join('\\\\') + '\\end{matrix}';
-};
-_.placeCursor = function(cursor) {
-  this.cursor = cursor.appendTo(this.firstChild);
-};
-_.keydown = function(e) {
-  var currentBlock = this.cursor.parent;
+var Choose =
+LatexCmds.choose = Class(Binomial, function(proto, super) {
+  proto.placeCursor = LiveFraction.prototype.placeCursor;
+});
 
-  if (currentBlock.parent === this) {
-    if (e.which === 13) { //enter
-      var newBlock = new MathBlock;
-      newBlock.parent = this;
-      newBlock.jQ = $('<span></span>')
-        .data(jQueryDataKey, {block: newBlock})
-        .insertAfter(currentBlock.jQ);
-      if (currentBlock.next)
-        currentBlock.next.prev = newBlock;
-      else
+var Vector = LatexCmds.vector = Class(MathCommand, function(proto, super) {
+  proto.init = function(replacedFragment) {
+    MathCommand.call(this, '\\vector', undefined, replacedFragment);
+  };
+  proto.html_template = ['<span class="array"></span>', '<span></span>'];
+  proto.latex = function() {
+    return '\\begin{matrix}' + this.foldChildren([], function (latex){
+      latex.push(this.latex());
+      return latex;
+    }).join('\\\\') + '\\end{matrix}';
+  };
+  proto.placeCursor = function(cursor) {
+    this.cursor = cursor.appendTo(this.firstChild);
+  };
+  proto.keydown = function(e) {
+    var currentBlock = this.cursor.parent;
+
+    if (currentBlock.parent === this) {
+      if (e.which === 13) { //enter
+        var newBlock = create(MathBlock);
+        newBlock.parent = this;
+        newBlock.jQ = $('<span></span>')
+          .data(jQueryDataKey, {block: newBlock})
+          .insertAfter(currentBlock.jQ);
+        if (currentBlock.next)
+          currentBlock.next.prev = newBlock;
+        else
+          this.lastChild = newBlock;
+
+        newBlock.next = currentBlock.next;
+        currentBlock.next = newBlock;
+        newBlock.prev = currentBlock;
+        this.cursor.appendTo(newBlock).redraw();
+        return false;
+      }
+      else if (e.which === 9 && !e.shiftKey && !currentBlock.next) { //tab
+        if (currentBlock.isEmpty()) {
+          if (currentBlock.prev) {
+            this.cursor.insertAfter(this);
+            delete currentBlock.prev.next;
+            this.lastChild = currentBlock.prev;
+            currentBlock.jQ.remove();
+            this.cursor.redraw();
+            return false;
+          }
+          else
+            return this.parent.keydown(e);
+        }
+
+        var newBlock = create(MathBlock);
+        newBlock.parent = this;
+        newBlock.jQ = $('<span></span>').data(jQueryDataKey, {block: newBlock}).appendTo(this.jQ);
         this.lastChild = newBlock;
+        currentBlock.next = newBlock;
+        newBlock.prev = currentBlock;
+        this.cursor.appendTo(newBlock).redraw();
+        return false;
+      }
+      else if (e.which === 8) { //backspace
+        if (currentBlock.isEmpty()) {
+          if (currentBlock.prev) {
+            this.cursor.appendTo(currentBlock.prev)
+            currentBlock.prev.next = currentBlock.next;
+          }
+          else {
+            this.cursor.insertBefore(this);
+            this.firstChild = currentBlock.next;
+          }
 
-      newBlock.next = currentBlock.next;
-      currentBlock.next = newBlock;
-      newBlock.prev = currentBlock;
-      this.cursor.appendTo(newBlock).redraw();
-      return false;
-    }
-    else if (e.which === 9 && !e.shiftKey && !currentBlock.next) { //tab
-      if (currentBlock.isEmpty()) {
-        if (currentBlock.prev) {
-          this.cursor.insertAfter(this);
-          delete currentBlock.prev.next;
-          this.lastChild = currentBlock.prev;
+          if (currentBlock.next)
+            currentBlock.next.prev = currentBlock.prev;
+          else
+            this.lastChild = currentBlock.prev;
+
           currentBlock.jQ.remove();
-          this.cursor.redraw();
+          if (this.isEmpty())
+            this.cursor.deleteForward();
+          else
+            this.cursor.redraw();
+
           return false;
         }
-        else
-          return this.parent.keydown(e);
+        else if (!this.cursor.prev)
+          return false;
       }
-
-      var newBlock = new MathBlock;
-      newBlock.parent = this;
-      newBlock.jQ = $('<span></span>').data(jQueryDataKey, {block: newBlock}).appendTo(this.jQ);
-      this.lastChild = newBlock;
-      currentBlock.next = newBlock;
-      newBlock.prev = currentBlock;
-      this.cursor.appendTo(newBlock).redraw();
-      return false;
     }
-    else if (e.which === 8) { //backspace
-      if (currentBlock.isEmpty()) {
-        if (currentBlock.prev) {
-          this.cursor.appendTo(currentBlock.prev)
-          currentBlock.prev.next = currentBlock.next;
-        }
-        else {
-          this.cursor.insertBefore(this);
-          this.firstChild = currentBlock.next;
-        }
+    return this.parent.keydown(e);
+  };
+});
 
-        if (currentBlock.next)
-          currentBlock.next.prev = currentBlock.prev;
-        else
-          this.lastChild = currentBlock.prev;
+LatexCmds.editable = consOverride(RootMathCommand, function(cons) {
+  cons('\\editable');
 
-        currentBlock.jQ.remove();
-        if (this.isEmpty())
-          this.cursor.deleteForward();
-        else
-          this.cursor.redraw();
-
-        return false;
-      }
-      else if (!this.cursor.prev)
-        return false;
-    }
-  }
-  return this.parent.keydown(e);
-};
-
-LatexCmds.vector = Vector;
-
-LatexCmds.editable = proto(RootMathCommand, function() {
-  MathCommand.call(this, '\\editable');
   createRoot(this.jQ, this.firstChild, false, true);
   var cursor;
   this.placeCursor = function(c) { cursor = c.appendTo(this.firstChild); };

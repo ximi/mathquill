@@ -3,53 +3,86 @@
  ************************************************/
 
 /**
+ *  MyClass = Class(MySuperClass, function(proto, super) {
+ *    ...
+ *  });
+ */
+function Class(parent, callback) {
+  if (typeof parent === 'function') {
+    callback = parent;
+    parent = Object;
+  }
+
+  var ctor = function() {}
+  ctor.prototype = new parent;
+
+  if (typeof callback === 'function') {
+    callback(
+      ctor.prototype, parent.prototype,
+      ctor, parent
+    )
+  }
+
+  return ctor;
+}
+
+// opting to use create(Cls, args...) instead of `new` or `.create()`
+// because it works better with minification.
+function create(Cls) {
+  var obj = new Cls,
+      args = __slice.apply(arguments, 1);
+
+  (typeof obj.init === 'function') && obj.init.apply(obj, args);
+  return obj;
+}
+/**
  * MathElement is the core Math DOM tree node prototype.
  * Both MathBlock's and MathCommand's descend from it.
  */
-function MathElement(){}
-_ = MathElement.prototype;
-_.prev = 0;
-_.next = 0;
-_.parent = 0;
-_.firstChild = 0;
-_.lastChild = 0;
-_.eachChild = function(fn) {
+var MathElement = Class(function(proto) {
+  proto.prev = 0;
+  proto.next = 0;
+  proto.parent = 0;
+  proto.firstChild = 0;
+  proto.lastChild = 0;
+  proto.eachChild = function(fn) {
     for (var child = this.firstChild; child; child = child.next)
       if (fn.call(child) === false) break;
 
     return this;
   };
-_.foldChildren = function(fold, fn) {
+  proto.foldChildren = function(fold, fn) {
     this.eachChild(function() {
       fold = fn.call(this, fold);
     });
     return fold;
   };
-_.keydown = function(e) {
+  proto.keydown = function(e) {
     return this.parent.keydown(e);
   };
-_.keypress = function(e) {
+  proto.keypress = function(e) {
     return this.parent.keypress(e);
   };
+});
 
 /**
  * Commands and operators, like subscripts, exponents, or fractions.
  * Descendant commands are organized into blocks.
  * May be passed a MathFragment that's being replaced.
  */
-function MathCommand(cmd, html_template, replacedFragment) {
-  if (!arguments.length) return;
-  var self = this; // minifier optimization
+var MathCommand = Class(MathElement, function(proto, super) {
+  proto.init = function(cmd, html_template, replacedFragment) {
+    if (!arguments.length) return;
+    var self = this; // minifier optimization
 
-  self.cmd = cmd;
-  if (html_template) self.html_template = html_template;
+    self.cmd = cmd;
+    if (html_template) self.html_template = html_template;
 
-  self.jQ = $(self.html_template[0]).data(jQueryDataKey, {cmd: self});
-  self.initBlocks(replacedFragment);
-}
+    self.jQ = $(self.html_template[0]).data(jQueryDataKey, {cmd: self});
+    self.initBlocks(replacedFragment);
+  }
 
-_ = MathCommand.prototype = new MathElement;
-_.initBlocks = function(replacedFragment) {
+  proto.initBlocks = function(replacedFragment) {
     var self = this;
     //single-block commands
     if (self.html_template.length === 1) {
@@ -91,12 +124,12 @@ _.initBlocks = function(replacedFragment) {
     }
     self.lastChild = newBlock;
   };
-_.latex = function() {
+  proto.latex = function() {
     return this.foldChildren(this.cmd, function(latex){
       return latex + '{' + (this.latex() || ' ') + '}';
     });
   };
-_.remove = function() {
+  proto.remove = function() {
     var self = this;
         prev = self.prev;
         next = self.next;
@@ -116,95 +149,99 @@ _.remove = function() {
 
     return self;
   };
-_.respace = $.noop; //placeholder for context-sensitive spacing
-_.placeCursor = function(cursor) {
+  proto.respace = $.noop; //placeholder for context-sensitive spacing
+  proto.placeCursor = function(cursor) {
     //append the cursor to the first empty child, or if none empty, the last one
     cursor.appendTo(this.foldChildren(this.firstChild, function(prev){
       return prev.isEmpty() ? prev : this;
     }));
   };
-_.isEmpty = function() {
+  proto.isEmpty = function() {
     return this.foldChildren(true, function(isEmpty){
       return isEmpty && this.isEmpty();
     });
   };
+});
 
 /**
  * Lightweight command without blocks or children.
  */
-function Symbol(cmd, html) {
-  MathCommand.call(this, cmd, [ html ]);
-}
-_ = Symbol.prototype = new MathCommand;
-_.initBlocks = $.noop;
-_.latex = function(){ return this.cmd; };
-_.placeCursor = $.noop;
-_.isEmpty = function(){ return true; };
+var Symbol = Class(function(proto, super) {
+  proto.init = function(cmd, html) {
+    super.init.call(this, cmd, [ html ]);
+  };
+
+  proto.initBlocks = $.noop;
+  proto.latex = function(){ return this.cmd; };
+  proto.placeCursor = $.noop;
+  proto.isEmpty = function(){ return true; };
+});
 
 /**
  * Children and parent of MathCommand's. Basically partitions all the
  * symbols and operators that descend (in the Math DOM tree) from
  * ancestor operators.
  */
-function MathBlock(){}
-_ = MathBlock.prototype = new MathElement;
-_.latex = function() {
+var MathBlock = Class(MathElement, function(proto) {
+  proto.latex = function() {
     return this.foldChildren('', function(latex){
       return latex + this.latex();
     });
   };
-_.isEmpty = function() {
+  proto.isEmpty = function() {
     return this.firstChild === 0 && this.lastChild === 0;
   };
-_.focus = function() {
+  proto.focus = function() {
     this.jQ.addClass('hasCursor');
     if (this.isEmpty())
       this.jQ.removeClass('empty');
 
     return this;
   };
-_.blur = function() {
+  proto.blur = function() {
     this.jQ.removeClass('hasCursor');
     if (this.isEmpty())
       this.jQ.addClass('empty');
 
     return this;
   };
+});
 
 /**
  * An entity outside the Math DOM tree with one-way pointers (so it's only
  * a "view" of part of the tree, not an actual node/entity in the tree)
  * that delimit a list of symbols and operators.
  */
-function MathFragment(parent, prev, next) {
-  if (!arguments.length) return;
+var MathFragment = Class(function(proto) {
+  proto.init = function(parent, prev, next) {
+    if (!arguments.length) return;
 
-  var self = this;
+    var self = this;
 
-  self.parent = parent;
-  self.prev = prev || 0; //so you can do 'new MathFragment(block)' without
-  self.next = next || 0; //ending up with this.prev or this.next === undefined
+    self.parent = parent;
+    self.prev = prev || 0; //so you can do 'new MathFragment(block)' without
+    self.next = next || 0; //ending up with this.prev or this.next === undefined
 
-  self.jQinit(self.fold($(), function(jQ){ return this.jQ.add(jQ); }));
-}
-_ = MathFragment.prototype;
-_.remove = MathCommand.prototype.remove;
-_.jQinit = function(children) {
+    self.jQinit(self.fold($(), function(jQ){ return this.jQ.add(jQ); }));
+  };
+
+  proto.remove = MathCommand.prototype.remove;
+  proto.jQinit = function(children) {
     this.jQ = children;
   };
-_.each = function(fn) {
+  proto.each = function(fn) {
     for (var el = this.prev.next || this.parent.firstChild; el !== this.next; el = el.next)
       if (fn.call(el) === false) break;
 
     return this;
   };
-_.fold = function(fold, fn) {
+  proto.fold = function(fold, fn) {
     this.each(function() {
       fold = fn.call(this, fold);
     });
     return fold;
   };
-_.blockify = function() {
+  proto.blockify = function() {
     var self = this;
         prev = self.prev;
         next = self.next;
@@ -233,3 +270,4 @@ _.blockify = function() {
 
     return newBlock;
   };
+});

@@ -5,30 +5,28 @@
 function bind(cons) { //shorthand for binding arguments to constructor
   var args = Array.prototype.slice.call(arguments, 1);
 
-  return proto(cons, function() {
+  return consOverride(cons, function() {
     cons.apply(this, args);
   });
 }
 
 LatexCmds.f = bind(Symbol, 'f', '<var class="florin">&fnof;</var>');
 
-function Variable(ch, html) {
-  Symbol.call(this, ch, '<var>'+(html || ch)+'</var>');
-}
-Variable.prototype = Symbol.prototype;
+var Variable = consOverride(Symbol, function(cons, ch, html) {
+  cons(ch, '<var>'+(html || ch)+'</var>');
+});
 
-function VanillaSymbol(ch, html) {
-  Symbol.call(this, ch, '<span>'+(html || ch)+'</span>');
-}
-VanillaSymbol.prototype = Symbol.prototype;
+var VanillaSymbol = consOverride(Symbol, function(cons, ch, html) {
+  cons(ch, '<span>'+(html || ch)+'</span>');
+};
 
 CharCmds[' '] = bind(VanillaSymbol, '\\:', ' ');
 
 LatexCmds.prime = CharCmds["'"] = bind(VanillaSymbol, "'", '&prime;');
 
-function NonSymbolaSymbol(ch, html) { //does not use Symbola font
-  Symbol.call(this, ch, '<span class="nonSymbola">'+(html || ch)+'</span>');
-}
+var NonSymbolaSymbol = consOverride(Symbol, function(cons, ch, html) { //does not use Symbola font
+  cons(ch, '<span class="nonSymbola">'+(html || ch)+'</span>');
+};
 NonSymbolaSymbol.prototype = Symbol.prototype;
 
 LatexCmds['@'] = NonSymbolaSymbol;
@@ -55,8 +53,8 @@ LatexCmds.sigma =
 LatexCmds.tau =
 LatexCmds.chi =
 LatexCmds.psi =
-LatexCmds.omega = proto(Symbol, function(replacedFragment, latex) {
-  Variable.call(this,'\\'+latex+' ','&'+latex+';');
+LatexCmds.omega = consOverride(Variable, function(cons, replacedFragment, latex) {
+  cons('\\'+latex+' ','&'+latex+';');
 });
 
 //why can't anybody FUCKING agree on these
@@ -127,34 +125,36 @@ LatexCmds.Psi =
 LatexCmds.Omega =
 
 //other symbols with the same LaTeX command and HTML character entity reference
-LatexCmds.forall = proto(Symbol, function(replacedFragment, latex) {
-  VanillaSymbol.call(this,'\\'+latex+' ','&'+latex+';');
+LatexCmds.forall = consOverride(VanillaSymbol, function(cons, replacedFragment, latex) {
+  cons('\\'+latex+' ','&'+latex+';');
 });
 
-function BinaryOperator(cmd, html) {
-  Symbol.call(this, cmd, '<span class="binary-operator">'+html+'</span>');
-}
-BinaryOperator.prototype = new Symbol; //so instanceof will work
-
-function PlusMinus(cmd, html) {
-  VanillaSymbol.apply(this, arguments);
-}
-_ = PlusMinus.prototype = new BinaryOperator; //so instanceof will work
-_.respace = function() {
-  if (!this.prev) {
-    this.jQ[0].className = '';
-  }
-  else if (
-    this.prev instanceof BinaryOperator &&
-    this.next && !(this.next instanceof BinaryOperator)
-  ) {
-    this.jQ[0].className = 'unary-operator';
-  }
-  else {
-    this.jQ[0].className = 'binary-operator';
-  }
-  return this;
+var BinaryOperator = Class(Symbol, function(proto, super) {
+  proto.init = function(cmd, html) {
+    super.init.call(this, cmd, '<span class="binary-operator">'+html+'</span>');
+  };
 };
+
+var PlusMinus = Class(BinaryOperator, function(proto, super) {
+  proto.init = function(cmd, html) {
+    VanillaSymbol.apply(this, arguments);
+  };
+  proto.respace = function() {
+    if (!this.prev) {
+      this.jQ[0].className = '';
+    }
+    else if (
+      this.prev instanceof BinaryOperator &&
+      this.next && !(this.next instanceof BinaryOperator)
+    ) {
+      this.jQ[0].className = 'unary-operator';
+    }
+    else {
+      this.jQ[0].className = 'binary-operator';
+    }
+    return this;
+  };
+});
 
 LatexCmds['+'] = bind(PlusMinus, '+');
 LatexCmds['-'] = bind(PlusMinus, '-', '&minus;');
