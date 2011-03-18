@@ -21,8 +21,40 @@ function createRoot(jQ, root, textbox, editable) {
 
   root.renderLatex(contents.text());
 
-  if (!editable) //if static, quit once we render the LaTeX
+  if (!editable) {//if static, just render LaTeX and attach selection handlers
+    jQ.bind('mousedown.mathquill', function(e) {
+      cursor.seek($(e.target), e.pageX, e.pageY).blink = $.noop;
+
+      var anticursor = new Cursor(root);
+      anticursor.jQ = anticursor._jQ = $();
+      if (cursor.next)
+        anticursor.insertBefore(cursor.next);
+      else
+        anticursor.appendTo(cursor.parent);
+
+      jQ.bind('mousemove.mathquill', function(e) {
+        cursor.seek($(e.target), e.pageX, e.pageY);
+
+        if (cursor.prev === anticursor.prev
+            && cursor.parent === anticursor.parent)
+          cursor.clearSelection();
+        else
+          cursor.selectFrom(anticursor);
+
+        return false;
+      });
+      $(document).bind('mousemove.mathquill', function(e){
+        delete e.target;
+        jQ.triggerHandler('mousemove', e);
+      }).one('mouseup', function(e) {
+        anticursor = undefined;
+        jQ.unbind('mousemove.mathquill');
+        $(document).unbind('mousemove.mathquill');
+      });
+    }).bind('selectstart.mathquill', false);
+
     return;
+  }
 
   root.textarea = $('<span class="textarea"><textarea></textarea></span>')
     .prependTo(jQ.addClass('mathquill-editable'));
