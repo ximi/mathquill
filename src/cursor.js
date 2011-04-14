@@ -196,10 +196,10 @@ _.resolveNonItalicizedFunctions = function() {
   while (node && node.latex()) {
     var raw = node.latex().replace(/ $/, '');
     var single_char = raw.match(/^[a-z]$/);
-    if (single_char || latex && raw[0] == '\\' && window._.include(functions, raw.substring(1)) && window._.include(functions, (raw + latex).substring(1))) {
+    if (single_char || latex && raw[0] == '\\' && $.inArray(raw.substring(1), functions) >= 0 && $.inArray((raw + latex).substring(1), functions) >= 0) {
       count++;
       latex = raw.replace(/\\/, '') + latex;
-      if (!single_char || (!node.prev || !node.prev.latex().match(/^[a-z]$/)) && window._.include(functions, latex)) {
+      if (!single_char || (!node.prev || !node.prev.latex().match(/^[a-z]$/)) && $.inArray(latex, functions) >= 0) {
         for(var i = 0; i < count; i++) {
           this.selectLeft();
         }
