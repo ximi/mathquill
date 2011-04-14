@@ -213,8 +213,6 @@ function addToolbar(root, jQ) {
     root.cursor.writeLatex(this.title, true);
     jQ.focus();
   });
-
-  return toolbar;
 }
 
 function RootMathBlock(){}
