@@ -187,7 +187,7 @@ function addToolbar(root, jQ) {
   var tabs = [];
   var panes = [];
   $.each(button_tabs, function(index, tab){
-    tabs.push('<li><a href="#' + tab.name + '_tab"><span>' + tab.example + '</span>' + tab.name + '</a></li>');
+    tabs.push('<li><a href="#' + tab.name + '_tab"><span class="mathquill-rendered-math">' + tab.example + '</span>' + tab.name + '</a></li>');
     var buttons = [];
     $.each(tab.button_groups, function(index, group) {
       $.each(group, function(index, cmd) {
