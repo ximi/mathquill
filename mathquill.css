@@ -295,7 +295,7 @@
   display: inline-block;
 }
 .mathquill-toolbar {
-  font-family: sans-serif, Verdana, Arial;
+  font-family: sans-serif, Arial, Verdana;
   font-size: 1em;
   margin: 0 -4px 10px;
   position: relative;
@@ -324,26 +324,31 @@
   -webkit-border-radius-topleft: 4px;
   border-top-right-radius: 4px;
   border-top-left-radius: 4px;
-  margin: 0 6px 0 0;
+  margin: 0 4px 0 0;
   float: left;
   top: 1px;
+  height: 2em;
+  overflow: hidden;
   position: relative;
-  padding-bottom: 1px;
 }
 .mathquill-tab-bar li.mathquill-tab-selected {
   background: #e8e8e8;
   border-color: #999;
-  color: #000;
 }
 .mathquill-tab-bar li a {
-  padding: 4px 8px !important;
-  color: inherit;
+  padding: 0 8px;
+  line-height: 2em;
+  color: #000;
   text-decoration: none;
   cursor: default;
   display: block;
 }
+*:first-child+html .mathquill-tab-bar li a { /* IE7 only */
+  padding: 0 7px;
+}
 .mathquill-tab-bar a span {
-  padding: 0 8px 0 0;
+  padding: 0 6px 0 0;
+  line-height: inherit;
   font-weight: bold;
 }
 .mathquill-toolbar-panes {
