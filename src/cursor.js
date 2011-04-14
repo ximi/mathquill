@@ -188,7 +188,32 @@ _.seek = function(target, pageX, pageY) {
 
   return cursor;
 };
-_.writeLatex = function(latex) {
+_.resolveNonItalicizedFunctions = function() {
+  var node = this.prev;
+  var count = 0;
+  var functions = ['ln', 'lg', 'log', 'span', 'proj', 'det', 'dim', 'min', 'max', 'mod', 'lcm', 'gcd', 'gcf', 'hcf', 'lim', 'sin', 'sinh', 'asin', 'arcsin', 'asinh', 'arcsinh', 'cos', 'cosh', 'acos', 'arccos', 'acosh', 'arccosh', 'tan', 'tanh', 'atan', 'arctan', 'atanh', 'arctanh', 'sec', 'sech', 'asec', 'arcsec', 'asech', 'arcsech', 'cosec', 'cosech', 'acosec', 'arccosec', 'acosech', 'arccosech', 'csc', 'csch', 'acsc', 'arccsc', 'acsch', 'arccsch', 'cotan', 'cotanh', 'acotan', 'arccotan', 'acotanh', 'arccotanh', 'cot', 'coth', 'acot', 'arccot', 'acoth', 'arccoth'];
+  var latex = '';
+  while (node && node.latex()) {
+    var raw = node.latex().replace(/ $/, '');
+    var single_char = raw.match(/^[a-z]$/);
+    if (single_char || latex && raw[0] == '\\' && window._.include(functions, raw.substring(1)) && window._.include(functions, (raw + latex).substring(1))) {
+      count++;
+      latex = raw.replace(/\\/, '') + latex;
+      if (!single_char || (!node.prev || !node.prev.latex().match(/^[a-z]$/)) && window._.include(functions, latex)) {
+        for(var i = 0; i < count; i++) {
+          this.selectLeft();
+        }
+        this.writeLatex("\\" + latex);
+        return;
+      }
+    }
+    else {
+      return;
+    }
+    node = node.prev;
+  }
+};
+_.writeLatex = function(latex, noMoveCursor) {
   this.deleteSelection();
   latex = ( latex && latex.match(/\\text\{([^{}]|\\\[{}])*\}|\\[\{\}\[\]]|[\(\)]|\\[a-z]*|[^\s]/ig) ) || 0;
   (function writeLatexBlock(cursor) {
@@ -267,13 +292,17 @@ _.writeLatex = function(latex) {
         else
           cursor.insertCh(token);
       });
-      cursor.insertAfter(cmd);
+      if (!noMoveCursor)
+        cursor.insertAfter(cmd);
     }
   }(this));
   return this.hide();
 };
 _.write = function(ch) {
-  return this.show().insertCh(ch);
+  var ret = this.show().insertCh(ch);
+  if (this.root.toolbar)
+    this.resolveNonItalicizedFunctions();
+  return ret;
 };
 _.insertCh = function(ch) {
   if (this.selection) {
